@@ -1,0 +1,17 @@
+/* Licence: https://github.com/eos-referendum/master/LICENCE.md */
+
+/*
+ * File:   referendum_declarations.hpp.hpp
+ * Author: Michael Fletcher | EOS42
+ *
+ * Created on 16 May 2018, 17:26
+*/
+
+namespace referendum {
+
+  const static uint8_t MINIMUM_VOTE_PARTICIPATION_PERCENTAGE = 15;
+  const static uint8_t REFERENDUM_VOTE_PEROID_DAYS = 120;
+  const static uint8_t SUSTAINED_VOTE_PERIOD_DAYS = 30;
+  const static uint8_t YES_LEADING_VOTE_PERCENTAGE = 10;
+
+}
