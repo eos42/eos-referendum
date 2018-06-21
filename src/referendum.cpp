@@ -58,6 +58,8 @@ void referendum::countvotes(account_name publisher){
 
   /* if vote_count / total_eos * 100 > MINIMUM_VOTE_PARTICIPATION_PERCENTAGE, this periods vote is succesful */
 
+  /* if vote_count_no > vote_count_yes - 10%, it's a no vote */
+
   /* if not, check if there's enough time left in this period to finish the vote */
 
   /* if true, start again at 0 */
