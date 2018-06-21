@@ -51,7 +51,7 @@ void referendum::vote(account_name voter_name, uint8_t vote_side){
  
    /* apply delta qty */   
   voters.modify(voter, _self, [&](auto &vote_rec){
-      vote_rec.existing_vote_quantity = voter->staked;
+      vote_rec.existing_vote_quantity = update_delta_quantity;
   });
 
 
