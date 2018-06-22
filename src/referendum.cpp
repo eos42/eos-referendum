@@ -11,6 +11,19 @@
 
 namespace referendum {
 
+void referendum::init(account_name publisher)
+{
+  refconfig ref_config;
+
+  ref_config.min_part_p = MINIMUM_VOTE_PARTICIPATION_PERCENTAGE;
+  ref_config.vote_period_d = REFERENDUM_VOTE_PERIOD_DAYS;
+  ref_config.sust_vote_d = SUSTAINED_VOTE_PERIOD_DAYS;
+  ref_config.yes_vote_w = YES_LEADING_VOTE_PERCENTAGE;
+
+  referendum_config.set(ref_config, _self);
+}
+
+
 //@abi action
 void referendum::vote(account_name voter_name, uint8_t vote_side){
   require_auth(voter_name);
