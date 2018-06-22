@@ -12,7 +12,9 @@ namespace referendum {
   const static uint8_t MINIMUM_VOTE_PARTICIPATION_PERCENTAGE = 15;
   const static uint8_t REFERENDUM_VOTE_PERIOD_DAYS = 120;
   const static uint8_t SUSTAINED_VOTE_PERIOD_DAYS = 30;
-  const static uint8_t YES_LEADING_VOTE_PERCENTAGE = 10;
+  const static uint8_t  YES_LEADING_VOTE_PERCENTAGE = 10;
+
+  const static double TOTAL_AVAILABLE_EOS = 1000000000;
 
   const static uint8_t VOTE_SIDE_YES = 1;
   const static uint8_t VOTE_SIDE_NO = 0;

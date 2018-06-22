@@ -14,7 +14,8 @@ namespace referendum {
 void referendum::vote(account_name voter_name, uint8_t vote_side){
   require_auth(voter_name);
 
-  /* TODO Check if vote is active */
+  /* check if vote is active */
+  eosio_assert(referendum_results.get().vote_active, "voting has finished");
 
   /* if they've staked, their will be a voter entry */
   auto voter = voter_info.find(voter_name);
@@ -30,6 +31,7 @@ void referendum::vote(account_name voter_name, uint8_t vote_side){
   /* register vote */
   registered_voters.emplace(_self, [&](auto &voter_rec){
     voter_rec.name = voter_name;
+    voter_rec.vote_side = vote_side;
   });
    
 }
@@ -37,7 +39,8 @@ void referendum::vote(account_name voter_name, uint8_t vote_side){
 void referendum::unvote(account_name voter_name){
   require_auth(voter_name);
 
-  /*TODO Check if vote is active */
+  /* check if vote is active */
+  eosio_assert(referendum_results.get().vote_active, "voting has finished");
 
    /* have they voted */
   auto registered_voter = registered_voters.find(voter_name);
@@ -47,26 +50,97 @@ void referendum::unvote(account_name voter_name){
   registered_voters.erase(registered_voter);
 }
 
+
 void referendum::countvotes(account_name publisher){
   require_auth(publisher);
 
-  /* check the vote is active */
-
-  
-  /* count the votes */
-  uint64_t total_votes = 0;
-
-  /* if vote_count / total_eos * 100 > MINIMUM_VOTE_PARTICIPATION_PERCENTAGE, this periods vote is succesful */
-
-  /* if vote_count_no > vote_count_yes - 10%, it's a no vote */
-
-  /* if not, check if there's enough time left in this period to finish the vote */
-
-  /* if true, start again at 0 */
-
-  /* if false, finish the vote */
+  /* check if vote is active */
+  eosio_assert(referendum_results.get().vote_active, "voting has finished");
  
-  /* increment total days passed */ 
+  bool vote_period_passed = false;
+ 
+  /* count the votes */
+  double total_votes_yes = 0;
+  double total_votes_no = 0;
+
+  /* check all the registered voters */
+  for(auto itr = registered_voters.begin(); itr != registered_voters.end(); ++itr)
+  {
+    auto user_votes = voter_info.find(itr->name);
+    if(user_votes == voter_info.end()){
+      continue; // user has not staked 
+    }
+
+    /* count each side */
+    switch(itr->vote_side)
+    {
+	case VOTE_SIDE_YES:
+	  total_votes_yes += user_votes->staked;
+	  break;
+
+	case VOTE_SIDE_NO:
+	  total_votes_no += user_votes->staked;
+	  break;
+
+	default:
+	  continue;
+	break;
+    }
+    
+  }
+
+  double total_votes = total_votes_yes + total_votes_no;
+
+  /* TODO -> we can make this dynamic by looking up how many EOS currently exist. it will do for now */
+  double total_network_vote_percentage = total_votes / TOTAL_AVAILABLE_EOS  * 100;
+ 
+  /* calculate vote percentages */
+  double yes_vote_percentage = total_votes_yes / total_votes * 100;
+  double no_vote_percentage = total_votes_no / total_votes * 100;
+
+  /* is it greater than the minimum pariticpation i.e 15%? */
+  if(total_network_vote_percentage > MINIMUM_VOTE_PARTICIPATION_PERCENTAGE)
+  {
+    /* Do we have more yes votes than no */
+    if(total_votes_yes > (total_votes_no + YES_LEADING_VOTE_PERCENTAGE))
+    {
+      vote_period_passed = true;
+    }
+  }   
+  
+  /* how many days have passed since the vote started + how many consecutive days has the vote been succesful */
+  uint64_t total_days = referendum_results.get().total_days;
+  uint64_t total_c_days = referendum_results.get().total_c_days;
+
+  /* todays vote has passed */
+  referendum_info new_referendum_info;
+  if(vote_period_passed){
+    
+    new_referendum_info.total_days = ++total_days;
+    new_referendum_info.total_c_days = ++total_c_days;
+    new_referendum_info.vote_active = true;
+ 
+  } else {
+
+    /* todays vote has failed, start again */
+    new_referendum_info.total_days = ++total_days;
+    new_referendum_info.total_c_days = 0;
+    
+    /* do we have enough time left within the vote period to complete a succesful vote if we start again? */
+    if(new_referendum_info.total_days + SUSTAINED_VOTE_PERIOD_DAYS > REFERENDUM_VOTE_PERIOD_DAYS)
+    {
+      new_referendum_info.vote_active = false;
+    } else {
+      new_referendum_info.vote_active = true;
+    }
+
+  }
+
+  /* Update the singleton storing referendum data */ 
+  referendum_results.set(new_referendum_info, _self);
+
+  //INLINE_ACTION_SENDER(referendum, publisher) ( _self, N(active)} 
+  /*TODO - submit transaction to check vote again in 127,800 blocks (1 day)*/
 }
 
 bool referendum::validate_side(uint8_t vote_side){

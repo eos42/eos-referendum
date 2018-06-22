@@ -14,10 +14,7 @@
 
 namespace referendum {
 
-
-/*TODO Change scope to point to system voters table? */
 typedef eosio::multi_index<N(voters), eosiosystem::voter_info> voter_info_table;
-
 
 struct referendum_info{
    uint64_t total_days = 0; // total days passed
@@ -28,10 +25,12 @@ struct referendum_info{
 };
 typedef eosio::singleton<N(referendum), referendum_info> referendum_results_table;
 
- 
+
+/*TODO Ensure no one can alter referendum contract tables */ 
 struct registered_voters {
 
     account_name name;
+    uint8_t	 vote_side;
     
     uint64_t primary_key() const {
         return name;
@@ -44,7 +43,7 @@ typedef eosio::multi_index<N(refvoters), registered_voters>  registered_voters_t
 
 class referendum : public eosio::contract {
 public:
-    referendum(account_name self):contract(self), registered_voters(self, self), voter_info(self, self), referendum_results(self, self) {}
+    referendum(account_name self):contract(self), registered_voters(self, self), voter_info(N(eosio), N(eosio)), referendum_results(self, self) {}
   
     void vote(account_name voter, uint8_t vote_side);
     void unvote(account_name voter);
