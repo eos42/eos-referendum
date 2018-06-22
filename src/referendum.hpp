@@ -19,6 +19,8 @@ typedef eosio::multi_index<N(voters), eosiosystem::voter_info> voter_info_table;
 /* store ref configurations for querying */
 //@abi table
 struct refconfig{
+  //TODO -> Ref Name
+  //TODO -> Ref Description
   uint64_t min_part_p; //min vote percent
   uint8_t vote_period_d; //total vote period
   uint8_t sust_vote_d; // total daily votes passed
