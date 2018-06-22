@@ -11,6 +11,7 @@
 
 namespace referendum {
 
+//@abi action
 void referendum::vote(account_name voter_name, uint8_t vote_side){
   require_auth(voter_name);
 
@@ -36,6 +37,7 @@ void referendum::vote(account_name voter_name, uint8_t vote_side){
    
 }
 
+//@abi action
 void referendum::unvote(account_name voter_name){
   require_auth(voter_name);
 
@@ -50,7 +52,7 @@ void referendum::unvote(account_name voter_name){
   registered_voters.erase(registered_voter);
 }
 
-
+//@abi action
 void referendum::countvotes(account_name publisher){
   require_auth(publisher);
 
@@ -113,7 +115,7 @@ void referendum::countvotes(account_name publisher){
   uint64_t total_c_days = referendum_results.get().total_c_days;
 
   /* todays vote has passed */
-  referendum_info new_referendum_info;
+  refinfo new_referendum_info;
   if(vote_period_passed){
     
     new_referendum_info.total_days = ++total_days;
