@@ -9,8 +9,11 @@
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
+<<<<<<< HEAD
 #include <eosiolib/action.hpp>
 #include <eosiolib/transaction.hpp>
+=======
+>>>>>>> ab6259ccb5b2a391cb17c6752c1f7c85a3765c4a
 #include <eosio.system/eosio.system.hpp>
 #include "referendum_declarations.hpp"
 
@@ -35,8 +38,13 @@ typedef eosio::singleton<N(refconfig), refconfig> referendum_config_table;
 /* keep track of the referendum */
 //@abi table
 struct refinfo{
+<<<<<<< HEAD
    uint64_t total_days; // total days passed
    uint8_t total_c_days; // total consecutive days vote has passed
+=======
+   uint64_t total_days = 0; // total days passed
+   uint8_t total_c_days = 0; // total consecutive days vote has passed
+>>>>>>> ab6259ccb5b2a391cb17c6752c1f7c85a3765c4a
    bool	    vote_active = true; // false when the vote has finished
 
    EOSLIB_SERIALIZE(refinfo, (total_days)(total_c_days))
@@ -77,7 +85,6 @@ private:
     referendum_config_table    referendum_config;
  
     bool validate_side(uint8_t vote_side);
-    void push_countvotes_transaction();
 };
 
 EOSIO_ABI(referendum, (vote)(unvote)(countvotes))

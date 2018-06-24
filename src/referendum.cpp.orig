@@ -21,9 +21,6 @@ void referendum::init(account_name publisher)
   ref_config.yes_vote_w = YES_LEADING_VOTE_PERCENTAGE;
 
   referendum_config.set(ref_config, _self);
-  
-  /* votes will be counter 24 hours from initalisation */
-  push_countvotes_transaction();
 }
 
 
@@ -133,6 +130,7 @@ void referendum::countvotes(account_name publisher){
   /* todays vote has passed */
   refinfo new_referendum_info;
   if(vote_period_passed){
+    
     new_referendum_info.total_days = ++total_days;
     new_referendum_info.total_c_days = ++total_c_days;
     new_referendum_info.vote_active = true;
@@ -156,17 +154,16 @@ void referendum::countvotes(account_name publisher){
   /* Update the singleton storing referendum data */ 
   referendum_results.set(new_referendum_info, _self);
 
-  /*submit transaction to count vote again in 24 hours*/
-  push_countvotes_transaction();
-}
-
-
-void referendum::push_countvotes_transaction(){
+<<<<<<< HEAD
   /*submit transaction to count vote again in 24 hours*/
   eosio::transaction out;
   out.actions.emplace_back( eosio::permission_level{ _self, N(active) }, _self, N(countvotes), _self );
-  out.delay_sec = 86400;
+  out.delay_sec = 86400; 
   out.send(_self, _self, true);
+=======
+  //INLINE_ACTION_SENDER(referendum, publisher) ( _self, N(active)} 
+  /*TODO - submit transaction to check vote again in 127,800 blocks (1 day)*/
+>>>>>>> ab6259ccb5b2a391cb17c6752c1f7c85a3765c4a
 }
 
 bool referendum::validate_side(uint8_t vote_side){
