@@ -19,6 +19,8 @@ void referendum::init(account_name publisher)
   ref_config.vote_period_d = REFERENDUM_VOTE_PERIOD_DAYS;
   ref_config.sust_vote_d = SUSTAINED_VOTE_PERIOD_DAYS;
   ref_config.yes_vote_w = YES_LEADING_VOTE_PERCENTAGE;
+  ref_config.name = VOTE_NAME;
+  ref_config.description = VOTE_DESCRIPTION;
 
   referendum_config.set(ref_config, _self);
   
@@ -86,7 +88,7 @@ void referendum::countvotes(account_name publisher){
   {
     auto user_votes = voter_info.find(itr->name);
     if(user_votes == voter_info.end()){
-      continue; // user has not staked 
+      continue;  // user has not staked 
     }
 
     /* count each side */
@@ -160,7 +162,6 @@ void referendum::countvotes(account_name publisher){
   push_countvotes_transaction();
 }
 
-
 void referendum::push_countvotes_transaction(){
   /*submit transaction to count vote again in 24 hours*/
   eosio::transaction out;
@@ -170,7 +171,6 @@ void referendum::push_countvotes_transaction(){
 }
 
 bool referendum::validate_side(uint8_t vote_side){
-
   switch(vote_side){
     case VOTE_SIDE_YES:
     case VOTE_SIDE_NO:
@@ -179,7 +179,6 @@ bool referendum::validate_side(uint8_t vote_side){
     default:
 	return false;
   }
-
 }
 
 }
