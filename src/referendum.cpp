@@ -237,6 +237,8 @@ void referendum::on( const delegatebw &d ) {
     if(registered_voters.find(d.receiver) == registered_voters.end()) {
         return;
     }
+	
+	/*TODO increase votes */
 }
 
 void referendum::on( const changebw &c ) {
@@ -244,6 +246,8 @@ void referendum::on( const changebw &c ) {
     if(registered_voters.find(c.receiver) == registered_voters.end()) {
         return;
     }
+	
+	/* TODO adjust votes */
 }
 
 
@@ -251,7 +255,7 @@ void referendum::apply(account_name contract, account_name act)
 {
 
     switch(act) {
-
+  /* TODO - check the contract is a system contract */
     case N(undelegatebw):
         on(eosio::unpack_action_data<undelegatebw>());
         return;
