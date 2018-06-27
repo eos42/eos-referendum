@@ -21,5 +21,5 @@ namespace referendum {
     const static uint8_t VOTE_SIDE_YES = 1;
     const static uint8_t VOTE_SIDE_NO = 0;
     const static uint8_t NULL_VOTE = NULL;
-
+    const static uint32_t COUNT_BATCH_SIZE = 1; //increasing this could fail if the execution time > 30ms. Can't be equal to 1.
 }

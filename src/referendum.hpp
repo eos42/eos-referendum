@@ -19,6 +19,20 @@ namespace referendum {
 
 typedef eosio::multi_index<N(voters), eosiosystem::voter_info> voter_info_table;
 
+/* store the batched counts */
+//@abi table
+struct refcount{
+  account_name bookmark; //last record counted
+  uint32_t t_votes_yes; //total yes
+  uint32_t t_votes_no;  //total no
+  bool locked; // are we counting votes?
+
+  EOSLIB_SERIALIZE(refcount, (bookmark)(t_votes_yes)(t_votes_no)(locked))
+};
+typedef eosio::singleton<N(refcount), refcount> referendum_count_table;
+
+
+
 /* store ref configurations for querying */
 //@abi table
 struct refconfig{
@@ -45,6 +59,8 @@ struct refinfo{
 };
 typedef eosio::singleton<N(refinfo), refinfo> referendum_results_table;
 
+
+
 /*TODO Ensure no one can alter referendum contract tables */ 
 /* keep track of voters */
 //@abi table
@@ -57,17 +73,25 @@ struct regvoters {
         return name;
     }
 
-    EOSLIB_SERIALIZE(regvoters, (name));
+    EOSLIB_SERIALIZE(regvoters, (name)(vote_side));
 };
-typedef eosio::multi_index<N(refvoters), regvoters>  registered_voters_table;
+typedef eosio::multi_index<N(regvoters), regvoters>  registered_voters_table;
+
+
 
 class referendum : public eosio::contract {
 public:
-    referendum(account_name self):contract(self), registered_voters(self, self), voter_info(N(eosio), N(eosio)), referendum_results(self, self), referendum_config(self, self){}
+    referendum(account_name self):contract(self), 
+				  registered_voters(self, self), 
+				  voter_info(N(eosio), N(eosio)), 
+				  referendum_results(self,self), 
+				  referendum_config(self, self), 
+				  referendum_count(self, self){}
  
     void init(account_name publisher); 
     void vote(account_name voter, uint8_t vote_side);
     void unvote(account_name voter);
+
     void countvotes(account_name publisher);
 
 private:
@@ -75,11 +99,13 @@ private:
     voter_info_table	       voter_info;
     referendum_results_table   referendum_results;
     referendum_config_table    referendum_config;
- 
+    referendum_count_table     referendum_count;
+
     bool validate_side(uint8_t vote_side);
-    void push_countvotes_transaction();
+    void push_countvotes_transaction(uint64_t delay_sec);
+//TODO    void countvotes(account_name publisher);
 };
 
-EOSIO_ABI(referendum, (init)(vote)(unvote)(countvotes))
+ EOSIO_ABI(referendum, (init)(vote)(unvote)   (countvotes))
 
 }
