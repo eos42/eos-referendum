@@ -11,6 +11,7 @@
 
 namespace referendum {
 
+   /* vote config */
     const static uint8_t MINIMUM_VOTE_PARTICIPATION_PERCENTAGE = 15;
     const static uint8_t REFERENDUM_VOTE_PERIOD_DAYS = 120;
     const static uint8_t SUSTAINED_VOTE_PERIOD_DAYS = 30;
@@ -18,8 +19,16 @@ namespace referendum {
     const static char* VOTE_NAME = "EOS42 Test Vote";
     const static char* VOTE_DESCRIPTION = "A test contract";
     const static double TOTAL_AVAILABLE_EOS = 1000000000;
-    const static uint8_t VOTE_SIDE_YES = 1;
+
+   /* vote options */ 
+   const static uint8_t VOTE_SIDE_YES = 1;
     const static uint8_t VOTE_SIDE_NO = 0;
     const static uint8_t NULL_VOTE = NULL;
-    const static uint32_t COUNT_BATCH_SIZE = 1; //increasing this could fail if the execution time > 30ms. Can't be equal to 1.
+  
+    /*time tags in seconds*/ 
+    const static uint64_t TIME_SECOND = 1;
+    const static uint64_t TIME_MINUTE = 60 * TIME_SECOND; 
+    const static uint64_t TIME_HOUR = 60 * TIME_MINUTE;
+    const static uint64_t TIME_DAY = 24 * TIME_HOUR;
+    const static uint64_t TIME_WEEK = 7 * TIME_DAY;
 }

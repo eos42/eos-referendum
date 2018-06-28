@@ -12,42 +12,40 @@
 
 namespace referendum {
 
+/*TODO Ensure no one can alter referendum contract tables */
 /*TODO when contract ended, finsh / tidy up tables */
 /*TODO Check only correct people can call contract function */
 /*TODO Only self can count votes */
-
+/*TODO Double check the on( functions only count EOS. */
+/*TODO Allow Multiple Vote */
 void referendum::init(account_name publisher)
 {
     require_auth(publisher);
 
     /* referendum can only be initialised once */
-    //eosio_assert(!referendum_config.exists(), "vote has already been initialised");
+    eosio_assert(!referendum_config.exists(), "vote has already been initialised");
 
     /* init config */
     refconfig ref_config;
-
     ref_config.min_part_p = MINIMUM_VOTE_PARTICIPATION_PERCENTAGE;
     ref_config.vote_period_d = REFERENDUM_VOTE_PERIOD_DAYS;
     ref_config.sust_vote_d = SUSTAINED_VOTE_PERIOD_DAYS;
     ref_config.yes_vote_w = YES_LEADING_VOTE_PERCENTAGE;
     ref_config.name = VOTE_NAME;
     ref_config.description = VOTE_DESCRIPTION;
-
     referendum_config.set(ref_config, _self);
 
     /* init info */
     refinfo ref_info;
-
     ref_info.total_days = 0;
     ref_info.total_c_days = 0;
     ref_info.vote_active = true;
     ref_info.t_votes_yes = 0;
     ref_info.t_votes_no = 0;
-
     referendum_results.set(ref_info, _self);
 
     /* votes will be counted 24 hours from initalisation */
-// TODO   push_countvotes_transaction(86400);
+    push_countvotes_transaction(TIME_DAY);
 }
 
 
@@ -61,7 +59,7 @@ void referendum::vote(account_name voter_name, uint8_t vote_side) {
     /* check if vote is active */
     eosio_assert(referendum_results.get().vote_active, "voting has finished");
 
-    /* if they've staked, their will be a voter entry */
+    /* if user has staked, their will be a voter entry */
     auto voter = voter_info.find(voter_name);
     eosio_assert(voter == voter_info.end(), "user must stake before they can vote");
 
@@ -76,10 +74,10 @@ void referendum::vote(account_name voter_name, uint8_t vote_side) {
     registered_voters.emplace(_self, [&](auto &voter_rec) {
         voter_rec.name = voter_name;
         voter_rec.vote_side = vote_side;
-	voter_rec.total_votes = voter->staked;
+        voter_rec.total_votes = voter->staked;
     });
 
-    /* tally the vote */
+    /* tally the voter, any change in bw will update the tally automatically */
     update_tally(voter->staked, vote_side);
 
 }
@@ -113,7 +111,6 @@ void referendum::update_tally(uint64_t delta_qty, uint8_t vote_side)
 {
     refinfo ref_info;
 
-    /* update the tally */
     auto itr = referendum_results.get();
 
     ref_info.t_votes_yes = itr.t_votes_yes;
@@ -130,9 +127,9 @@ void referendum::update_tally(uint64_t delta_qty, uint8_t vote_side)
         break;
     }
 
-    /* update the tally */
     referendum_results.set(ref_info, _self);
 }
+
 
 
 void referendum::countvotes(account_name publisher) {
@@ -168,9 +165,9 @@ void referendum::countvotes(account_name publisher) {
     uint64_t total_days = results_itr.total_days;
     uint64_t total_c_days = results_itr.total_c_days;
 
-    /* todays vote has passed */
     refinfo new_referendum_info;
     if(vote_period_passed) {
+        /* todays vote has passed */
         new_referendum_info.total_days = ++total_days;
         new_referendum_info.total_c_days = ++total_c_days;
         new_referendum_info.vote_active = true;
@@ -196,17 +193,16 @@ void referendum::countvotes(account_name publisher) {
         new_referendum_info.vote_active = false; // the vote has passed!
     }
 
-
     /* Update the singleton storing referendum data */
     referendum_results.set(new_referendum_info, _self);
+
+    /* count the votes again in 24 hours */
+    push_countvotes_transaction(TIME_DAY);
 }
 
 void referendum::push_countvotes_transaction(uint64_t delay_sec) {
-    /*submit transaction to count vote again in 24 hours*/
     eosio::transaction out;
-
     out.actions.emplace_back( eosio::permission_level{ _self, N(active) }, _self, N(countvotes), _self );
-
     out.delay_sec = delay_sec;
     out.send(_self, _self, true);
 }
@@ -224,61 +220,68 @@ bool referendum::validate_side(uint8_t vote_side) {
 
 void referendum::on( const undelegatebw &u ) {
 
+    /* check user is a voter */
+    auto reg_voter = registered_voters.find(u.receiver);
     if(registered_voters.find(u.receiver) == registered_voters.end()) {
         return;
     }
 
-    //TODO reduce vote total by users total_votes
-    //TODO set total_votes to 0
+    /* update the tally */
+    eosio::asset total_update = u.unstake_net_quantity + u.unstake_cpu_quantity;
+    update_tally(-total_update.amount, reg_voter->vote_side);
+
+    /* update user votes */
+    registered_voters.modify(reg_voter, _self, [&](auto &voter_rec) {
+        voter_rec.total_votes -= total_update.amount;
+    });
 }
 
 void referendum::on( const delegatebw &d ) {
 
-    if(registered_voters.find(d.receiver) == registered_voters.end()) {
+    /* check user is a voter */
+    auto reg_voter = registered_voters.find(d.receiver);
+    if(reg_voter == registered_voters.end()) {
         return;
     }
-	
-	/*TODO increase votes */
-}
 
-void referendum::on( const changebw &c ) {
+    /* update the tally */
+    eosio::asset total_update = d.stake_net_quantity + d.stake_cpu_quantity;
+    update_tally(total_update.amount, reg_voter->vote_side);
 
-    if(registered_voters.find(c.receiver) == registered_voters.end()) {
-        return;
-    }
-	
-	/* TODO adjust votes */
+    /* update user votes */
+    registered_voters.modify(reg_voter, _self, [&](auto &voter_rec) {
+        voter_rec.total_votes += total_update.amount;
+    });
 }
 
 
 void referendum::apply(account_name contract, account_name act)
 {
+    /* listens for delegate / undelegate actions of users who have voted to adjust the tallies */
+    if(contract == N(system))
+    {
+        switch(act) {
+        case N(undelegatebw):
+            on(eosio::unpack_action_data<undelegatebw>());
+            return;
+        case N(delegatebw):
+            on(eosio::unpack_action_data<delegatebw>());
+            return;
 
-    switch(act) {
-  /* TODO - check the contract is a system contract */
-    case N(undelegatebw):
-        on(eosio::unpack_action_data<undelegatebw>());
-        return;
-    case N(delegatebw):
-        on(eosio::unpack_action_data<delegatebw>());
-        return;
-    case N(changebw):
-        on(eosio::unpack_action_data<changebw>());
-        return;
+        default:
+            break;
 
-    default:
-        break;
+        }
+    }
+
+    if(contract == _self) {
+        auto& thiscontract = *this;
+        switch(act) {
+            EOSIO_API(referendum, (init)(vote)(unvote)(countvotes));
+        }
 
     }
 
-    if(contract != _self) {
-        return;
-    }
-
-    auto& thiscontract = *this;
-    switch(act) {
-        EOSIO_API(referendum, (init)(vote)(unvote)(countvotes));
-    }
 }
 
 extern "C" {

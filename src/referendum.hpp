@@ -39,17 +39,7 @@ struct delegatebw {
     EOSLIB_SERIALIZE(delegatebw, (from)(receiver)(stake_net_quantity)(stake_cpu_quantity)(transfer)) //TODO Remove?
 };
 
-struct changebw {
-   account_name from;
-    account_name receiver;
-    eosio::asset stake_net_quantity;
-    eosio::asset stake_cpu_quantity;
-    bool transfer;
 
-    EOSLIB_SERIALIZE(changebw, (from)(receiver)(stake_net_quantity)(stake_cpu_quantity)(transfer)) //TODO Remove?
-};
-
-/* store ref configurations for querying */
 //@abi table
 struct refconfig {
     uint64_t min_part_p; // min vote percent
@@ -64,7 +54,6 @@ struct refconfig {
 typedef eosio::singleton<N(refconfig), refconfig> referendum_config_table;
 
 
-/* keep track of the referendum */
 //@abi table
 struct refinfo {
     uint64_t total_days;  // total days passed
@@ -78,12 +67,8 @@ struct refinfo {
 typedef eosio::singleton<N(refinfo), refinfo> referendum_results_table;
 
 
-
-/*TODO Ensure no one can alter referendum contract tables */
-/* keep track of voters */
 //@abi table
 struct regvoters {
-
     account_name name;
     uint8_t	 vote_side;
     uint8_t	 total_votes;
@@ -122,11 +107,7 @@ private:
     void update_tally(uint64_t delta_qty, uint8_t vote_side);
     void on(const undelegatebw &u);
     void on(const delegatebw &u);
-    void on(const changebw &u);
     bool validate_side(uint8_t vote_side);
-    
-
 };
-
 
 }
