@@ -18,7 +18,7 @@ namespace referendum {
 /*TODO Only self can count votes */
 /*TODO Double check the on( functions only count EOS. */
 /*TODO Allow Multiple Vote */
-void referendum::init(account_name publisher)
+void referendum::init(account_name const publisher)
 {
     require_auth(publisher);
 
@@ -50,7 +50,7 @@ void referendum::init(account_name publisher)
 
 
 //@abi action
-void referendum::vote(account_name voter_name, uint8_t vote_side) {
+void referendum::vote(account_name const voter_name, uint8_t const vote_side) {
     require_auth(voter_name);
 
     /* check vote has been initialised */
@@ -60,14 +60,14 @@ void referendum::vote(account_name voter_name, uint8_t vote_side) {
     eosio_assert(referendum_results.get().vote_active, "voting has finished");
 
     /* if user has staked, their will be a voter entry */
-    auto voter = voter_info.find(voter_name);
+    auto const voter = voter_info.find(voter_name);
     eosio_assert(voter == voter_info.end(), "user must stake before they can vote");
 
     /* vote side yes = 1 or no = 0 */
     eosio_assert(validate_side(vote_side), "vote side is invalid");
 
     /* have they already voted */
-    auto registered_voter = registered_voters.find(voter_name);
+    auto const registered_voter = registered_voters.find(voter_name);
     eosio_assert(registered_voter == registered_voters.end(), "user has already voted");
 
     /* register vote */
@@ -83,7 +83,7 @@ void referendum::vote(account_name voter_name, uint8_t vote_side) {
 }
 
 //@abi action
-void referendum::unvote(account_name voter_name) {
+void referendum::unvote(account_name const voter_name) {
     require_auth(voter_name);
 
     /* check vote has been initalised*/
@@ -97,7 +97,7 @@ void referendum::unvote(account_name voter_name) {
     eosio_assert(registered_voter != registered_voters.end(), "user has not voted");
 
     /* find the voter record to check how much is staked */
-    auto voter = voter_info.find(voter_name);
+    auto const voter = voter_info.find(voter_name);
 
     /* update the tally */
     update_tally(-voter->staked, registered_voter->vote_side);
@@ -107,11 +107,11 @@ void referendum::unvote(account_name voter_name) {
 }
 
 
-void referendum::update_tally(uint64_t delta_qty, uint8_t vote_side)
+void referendum::update_tally(uint64_t const delta_qty, uint8_t const vote_side)
 {
     refinfo ref_info;
 
-    auto itr = referendum_results.get();
+    auto const itr = referendum_results.get();
 
     ref_info.t_votes_yes = itr.t_votes_yes;
     ref_info.t_votes_no = itr.t_votes_no;
@@ -121,9 +121,10 @@ void referendum::update_tally(uint64_t delta_qty, uint8_t vote_side)
     case VOTE_SIDE_YES:
         ref_info.t_votes_yes += delta_qty;
         break;
-
     case VOTE_SIDE_NO:
         ref_info.t_votes_no += delta_qty;
+        break;
+    default:
         break;
     }
 
@@ -132,26 +133,26 @@ void referendum::update_tally(uint64_t delta_qty, uint8_t vote_side)
 
 
 
-void referendum::countvotes(account_name publisher) {
+void referendum::countvotes(account_name const publisher) {
     require_auth(publisher);
 
     /* check vote has been initalised*/
     eosio_assert(referendum_results.exists(), "vote has not been initialised");
 
-    auto results_itr = referendum_results.get();
+    auto const results_itr = referendum_results.get();
 
-    double total_votes = results_itr.t_votes_yes + results_itr.t_votes_no;
+    double const total_votes = results_itr.t_votes_yes + results_itr.t_votes_no;
 
     /* TODO -> we can make this dynamic by looking up how many EOS currently exist. it will do for now */
-    double total_network_vote_percentage = total_votes / TOTAL_AVAILABLE_EOS  * 100; //todo check how system contract reads max token supply
+    double const total_network_vote_percentage = 100.0 * total_votes / TOTAL_AVAILABLE_EOS; //todo check how system contract reads max token supply
 
     /* calculate vote percentages */
-    double yes_vote_percentage = results_itr.t_votes_yes / total_votes * 100;
-    double no_vote_percentage = results_itr.t_votes_no / total_votes * 100;
+    double const yes_vote_percentage = 100.0 * results_itr.t_votes_yes / total_votes;
+    double const no_vote_percentage = 100.0 * results_itr.t_votes_no / total_votes;
 
     bool vote_period_passed = false;
 
-    /* is it greater than the minimum pariticpation i.e 15%? */
+    /* is it greater than or equal to the minimum pariticpation i.e 15%? */
     if(total_network_vote_percentage >= MINIMUM_VOTE_PARTICIPATION_PERCENTAGE)
     {
         /* Do we have more yes votes than no */
@@ -161,27 +162,35 @@ void referendum::countvotes(account_name publisher) {
         }
     }
 
-    /* how many days have passed since the vote started + how many consecutive days has the vote been succesful */
+    /* how many days have passed since the vote started + how many consecutive days has the vote been successful */
     uint64_t total_days = results_itr.total_days;
     uint64_t total_c_days = results_itr.total_c_days;
 
     refinfo new_referendum_info;
-    if(vote_period_passed) {
+    if(vote_period_passed) 
+    {
         /* todays vote has passed */
-        new_referendum_info.total_days = ++total_days;
-        new_referendum_info.total_c_days = ++total_c_days;
+        total_days++;
+        total_c_days++;
+        new_referendum_info.total_days = total_days;
+        new_referendum_info.total_c_days = total_c_days;
         new_referendum_info.vote_active = true;
 
-    } else {
+    } 
+    else 
+    {
         /* todays vote has failed, start again */
-        new_referendum_info.total_days = ++total_days;
+        total_days++;
+        new_referendum_info.total_days = total_days;
         new_referendum_info.total_c_days = 0;
 
         /* do we have enough time left within the vote period to complete a succesful vote if we start again? */
         if(new_referendum_info.total_days + SUSTAINED_VOTE_PERIOD_DAYS > REFERENDUM_VOTE_PERIOD_DAYS)
         {
             new_referendum_info.vote_active = false;
-        } else {
+        } 
+        else 
+        {
             new_referendum_info.vote_active = true;
         }
 
@@ -200,25 +209,18 @@ void referendum::countvotes(account_name publisher) {
     push_countvotes_transaction(TIME_DAY);
 }
 
-void referendum::push_countvotes_transaction(uint64_t delay_sec) {
+void referendum::push_countvotes_transaction(uint64_t const delay_sec) {
     eosio::transaction out;
     out.actions.emplace_back( eosio::permission_level{ _self, N(active) }, _self, N(countvotes), _self );
     out.delay_sec = delay_sec;
     out.send(_self, _self, true);
 }
 
-bool referendum::validate_side(uint8_t vote_side) {
-    switch(vote_side) {
-    case VOTE_SIDE_YES:
-    case VOTE_SIDE_NO:
-        return true;
-
-    default:
-        return false;
-    }
+bool referendum::validate_side(uint8_t const vote_side) {
+  return vote_side == VOTE_SIDE_YES || vote_side == VOTE_SIDE_NO;
 }
 
-void referendum::on( const undelegatebw &u ) {
+void referendum::on(undelegatebw const & u) {
 
     /* check user is a voter */
     auto reg_voter = registered_voters.find(u.receiver);
@@ -236,7 +238,7 @@ void referendum::on( const undelegatebw &u ) {
     });
 }
 
-void referendum::on( const delegatebw &d ) {
+void referendum::on(delegatebw const & d) {
 
     /* check user is a voter */
     auto reg_voter = registered_voters.find(d.receiver);
@@ -255,7 +257,7 @@ void referendum::on( const delegatebw &d ) {
 }
 
 
-void referendum::apply(account_name contract, account_name act)
+void referendum::apply(account_name contract, account_name const act)
 {
     /* listens for delegate / undelegate actions of users who have voted to adjust the tallies */
     if(contract == N(system))
@@ -275,7 +277,7 @@ void referendum::apply(account_name contract, account_name act)
     }
 
     if(contract == _self) {
-        auto& thiscontract = *this;
+        auto& thiscontract = *this; 
         switch(act) {
             EOSIO_API(referendum, (init)(vote)(unvote)(countvotes));
         }
